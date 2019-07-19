@@ -260,3 +260,7 @@ variable "iam_instance_profile_name" {
   default     = null
 }
 
+variable "target_arns" {
+  type    = list(string)
+  default = []
+}

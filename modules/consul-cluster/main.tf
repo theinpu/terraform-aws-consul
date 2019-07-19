@@ -20,10 +20,11 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   vpc_zone_identifier = var.subnet_ids
 
   # Run a fixed number of instances in the ASG
-  min_size             = var.cluster_size
-  max_size             = var.cluster_size
-  desired_capacity     = var.cluster_size
-  termination_policies = [var.termination_policies]
+  min_size         = var.cluster_size
+  max_size         = var.cluster_size
+  desired_capacity = var.cluster_size
+  termination_policies = [
+  var.termination_policies]
 
   health_check_type         = var.health_check_type
   health_check_grace_period = var.health_check_grace_period
@@ -31,6 +32,8 @@ resource "aws_autoscaling_group" "autoscaling_group" {
   service_linked_role_arn   = var.service_linked_role_arn
 
   enabled_metrics = var.enabled_metrics
+
+  target_group_arns = var.target_arns
 
   tags = flatten(
     [
@@ -60,14 +63,13 @@ resource "aws_launch_configuration" "launch_configuration" {
   user_data     = var.user_data
   spot_price    = var.spot_price
 
-  iam_instance_profile = var.enable_iam_setup ? element(
-    concat(aws_iam_instance_profile.instance_profile.*.name, [""]),
-    0,
-  ) : var.iam_instance_profile_name
+  iam_instance_profile = var.enable_iam_setup ? concat(aws_iam_instance_profile.instance_profile.*.name, [
+  ""])[0] : var.iam_instance_profile_name
   key_name = var.ssh_key_name
 
   security_groups = concat(
-    [aws_security_group.lc_security_group.id],
+    [
+    aws_security_group.lc_security_group.id],
     var.additional_security_group_ids,
   )
   placement_tenancy           = var.tenancy
@@ -111,7 +113,9 @@ resource "aws_security_group" "lc_security_group" {
 
   tags = merge(
     {
-      "Name" = var.cluster_name
+      key                 = "Name"
+      value               = var.cluster_name
+      propagate_at_launch = true
     },
     var.security_group_tags,
   )
@@ -140,11 +144,12 @@ resource "aws_security_group_rule" "allow_ssh_inbound_from_security_group_ids" {
 }
 
 resource "aws_security_group_rule" "allow_all_outbound" {
-  type        = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  cidr_blocks = ["0.0.0.0/0"]
+  type      = "egress"
+  from_port = 0
+  to_port   = 0
+  protocol  = "-1"
+  cidr_blocks = [
+  "0.0.0.0/0"]
 
   security_group_id = aws_security_group.lc_security_group.id
 }
@@ -180,7 +185,8 @@ resource "aws_iam_instance_profile" "instance_profile" {
 
   name_prefix = var.cluster_name
   path        = var.instance_profile_path
-  role        = element(concat(aws_iam_role.instance_role.*.name, [""]), 0)
+  role = element(concat(aws_iam_role.instance_role.*.name, [
+  ""]), 0)
 
   # aws_launch_configuration.launch_configuration in this module sets create_before_destroy to true, which means
   # everything it depends on, including this resource, must set it as well, or you'll get cyclic dependency errors
@@ -206,12 +212,14 @@ resource "aws_iam_role" "instance_role" {
 
 data "aws_iam_policy_document" "instance_role" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    effect = "Allow"
+    actions = [
+    "sts:AssumeRole"]
 
     principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      type = "Service"
+      identifiers = [
+      "ec2.amazonaws.com"]
     }
   }
 }
@@ -223,7 +231,8 @@ data "aws_iam_policy_document" "instance_role" {
 module "iam_policies" {
   source = "../consul-iam-policies"
 
-  enabled     = var.enable_iam_setup
-  iam_role_id = element(concat(aws_iam_role.instance_role.*.id, [""]), 0)
+  enabled = var.enable_iam_setup
+  iam_role_id = element(concat(aws_iam_role.instance_role.*.id, [
+  ""]), 0)
 }
 
